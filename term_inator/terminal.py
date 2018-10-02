@@ -1,7 +1,20 @@
-import logging
+import logging, time
 from .recorder import Recorder
 import subprocess, string, random
+from collections import namedtuple
 
+
+class Key:
+    def __init__(self, code):
+        self.code = code
+
+    def __add__(self, other):
+        if isinstance(other, str):
+            return Key(self.code + other)
+        elif isinstance(other, Key):
+            return Key(self.code + other.code)
+        else:
+            raise NotImplemented()
 
 
 class TerminalConstsMixin:
@@ -12,23 +25,25 @@ class TerminalConstsMixin:
     INSTANTLY = 0.0
 
     # keys
-    UP = ('Up', )
-    DOWN = ('Down', )
-    LEFT = ('Left', )
-    RIGHT = ('Right', )
-    BACKSPACE = ('BSpace', )
+    UP = Key('Up')
+    DOWN = Key('Down')
+    LEFT = Key('Left')
+    RIGHT = Key('Right')
+    BACKSPACE = Key('BSpace')
     # BTab,
-    DELETE = ('DC', )
-    END = ('End', )
-    ENTER = ('Enter', )
-    ESC = ('Escape', )
-    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12 = map(lambda i: (f"F{i}",), range(1,13))
-    HOME = ('Home', )
-    INSERT = ('IC', )
-    PAGE_DOWN = ('PageDown', )
-    PAGE_UP = ('PageUp',)
-    SPACE =('Space',)
-    TAB = ('Tab',)
+    DELETE = Key('DC')
+    END = Key('End')
+    ENTER = Key('Enter')
+    ESC = Key('Escape')
+    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12 = map(lambda i: Key(f"F{i}"), range(1,13))
+    HOME = Key('Home')
+    INSERT = Key('IC')
+    PAGE_DOWN = Key('PageDown')
+    PAGE_UP = Key('PageUp')
+    SPACE = Key('Space')
+    TAB = Key('Tab')
+    CTRL = Key('C-')
+    ALT = META = Key('M-')
 
 
 class TerminalPropertyMixin:
@@ -70,7 +85,7 @@ class TerminalPropertyMixin:
 
 class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
     def __init__(self, width=80, height=25):
-        self.cps = 3
+        self.cps = 10
         self.width = width
         self.height = height
 
@@ -96,32 +111,52 @@ class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
         logging.info('Enter Terminal')
 
         subprocess.Popen(['xfce4-terminal', '-x', 'tmux', 'attach-session', '-t', self.session_id])
-        self.control = subprocess.Popen(['tmux', '-C', 'attach', '-t', self.session_id], stdin=subprocess.PIPE)
+        self.control = subprocess.Popen(['tmux', '-C', 'attach', '-t', self.session_id], stdin=subprocess.PIPE, encoding='utf-8')
 
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # assert subprocess.call([
-        #     'tmux',
-        #     'kill-session',
-        #     '-t', self.session_id
-        #     ]) == 0
+        logging.info('Kill tmux control')
+        assert subprocess.call([
+            'tmux',
+            'kill-session',
+            '-t', self.session_id
+            ]) == 0
         logging.info('Exit Terminal')
 
     def exec(self, *cmd):
         pass
 
-    def type(self, *cmds, speed=None):
-        # cmd = ''.join(cmd)
-        logging.info('Typing: %s', cmds)
-        for cmd in cmds:
-            if isinstance(cmd, str):
-                self.control.communicate(('send-keys -t 0 -l ' + cmd + "\n").encode('utf-8'))
+    def _send_cmd(self, cmd):
+        assert isinstance(cmd, str)
+        logging.info('SendCmd: %s', cmd)
+        self.control.stdin.write(cmd + "\n")
+        self.control.stdin.flush()
+
+    def type(self, *args, speed=None):
+        logging.info('Typing: %s', args)
+        # calculate
+        delay = (speed or self.NORMAL) * self.delay / 1000.0
+        keys = []
+        for arg in args:
+            if isinstance(arg, str):
+                keys.extend(list(arg))
+            elif isinstance(arg, Key):
+                keys.append(arg)
             else:
-                self.control.communicate(('send-keys -t 0 ' + cmd[0] + "\n").encode('utf-8'))
+                raise ValueError('Unsupported argument')
+
+        for key in keys:
+            time.sleep(delay)
+            if key == ' ':
+                key = self.SPACE
+            if isinstance(key, str):
+                self._send_cmd('send-keys -t 0 -l ' + key)
+            else:
+                self._send_cmd('send-keys -t 0 ' + key.code)
 
     def sleep(self, amount):
-        pass
+        time.sleep(amount / 1000.0)
 
     def record(self, path, **opts):
         return Recorder(path, **opts)
