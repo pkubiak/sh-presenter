@@ -15,7 +15,15 @@ class Key:
             return Key(self.code + other.code)
         else:
             raise NotImplemented()
+    def __repr__(self):
+        return f"Key({repr(self.code)})"
 
+KEYS_MAPPING = {
+    ' ': Key('Space'),
+    ';': r'\;',
+    '\t': Key('Tab'),
+    '\n': Key('Enter'),
+}
 
 class TerminalConstsMixin:
     # typing speeds (multiplier for term.delay)
@@ -96,10 +104,7 @@ class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
             name += random.choice(string.ascii_letters)
         return name
 
-    def __enter__(self):
-        self.session_id = self._random_session_id()
-        logging.info('Tmux session id: %s', self.session_id)
-
+    def _init_control(self):
         assert subprocess.call([
             'tmux',
             'new-session', '-d',
@@ -108,10 +113,22 @@ class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
             '-y', str(self.height)
             ]) == 0
 
-        logging.info('Enter Terminal')
-
         subprocess.Popen(['xfce4-terminal', '-x', 'tmux', 'attach-session', '-t', self.session_id])
         self.control = subprocess.Popen(['tmux', '-C', 'attach', '-t', self.session_id], stdin=subprocess.PIPE, encoding='utf-8')
+
+        logging.info('Enter Terminal')
+
+        # TODO: to niżej nie działa
+        self._send_cmd('set-option -g destroy-unattached off')  # prevent session kill when tmux window is closed
+        self._send_cmd(f"set-option -w force-width {self.width}")
+        self._send_cmd(f"set-option -w force-height {self.height}")
+
+    def __enter__(self):
+        self.session_id = self._random_session_id()
+        logging.info('Tmux session id: %s', self.session_id)
+
+        self._init_control()
+
 
         return self
 
@@ -136,7 +153,10 @@ class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
     def type(self, *args, speed=None):
         logging.info('Typing: %s', args)
         # calculate
-        delay = (speed or self.NORMAL) * self.delay / 1000.0
+        if speed is None:
+            speed = self.NORMAL
+
+        delay = speed * self.delay / 1000.0
         keys = []
         for arg in args:
             if isinstance(arg, str):
@@ -148,10 +168,11 @@ class Terminal(TerminalConstsMixin, TerminalPropertyMixin):
 
         for key in keys:
             time.sleep(delay)
-            if key == ' ':
-                key = self.SPACE
+            key = KEYS_MAPPING.get(key, key)
             if isinstance(key, str):
-                self._send_cmd('send-keys -t 0 -l ' + key)
+                if key == '\'':
+                    self._sned_cmd('send-keys -t 0 -l "\'"')
+                else: self._send_cmd('send-keys -t 0 -l \'' + key + '\'')
             else:
                 self._send_cmd('send-keys -t 0 ' + key.code)
 
