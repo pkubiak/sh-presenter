@@ -19,12 +19,12 @@ class Presenter:
     INSTANT = float('inf')
 
 
-    def __init__(self, width=80, height=25, cps=10.0):
+    def __init__(self, width: int = 80, height: int = 25, cps=10.0, interactive: bool = False):
         self.width = width
         self.height = height
 
         self._recordings = []
-        self._session = TmuxSession(self.width, self.height)
+        self._session = TmuxSession(self.width, self.height, interactive=interactive)
         self._delay = 0  # delay between keystrokes in miliseconds
         self.cps = cps
 
