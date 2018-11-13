@@ -7,8 +7,8 @@ if __name__ == '__main__':
 
         # initialize terminal
         p.type('unset HISTFILE', Keys.ENTER, speed=p.INSTANT)
-        p.type('reset', Keys.ENTER, speed=p.INSTANT)
-        p.sleep(5000)
+        p.type('clear', Keys.ENTER, speed=p.INSTANT)
+        p.sleep(2000)
         p.marker('after_init')  # set marker
 
         # display comments

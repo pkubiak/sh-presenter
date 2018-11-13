@@ -127,7 +127,7 @@ class TmuxSession:
 
         self.stdout = TmuxControlReader(self.tmux.stdout)
         self.stdout.start()
-
+        time.sleep(0.500)
         self.set_option('destroy-unattached', 'off', glob=True) # prevent session kill when tmux window is closed
         self.set_option('force-width', self.width, glob=True)
         self.set_option('force-height', self.height, glob=True)
@@ -137,7 +137,7 @@ class TmuxSession:
 
     def _send_cmd(self, cmd):
         assert isinstance(cmd, str)
-
+        print(cmd)
         self.tmux.stdin.write(cmd + "\n")
         self.tmux.stdin.flush()
 

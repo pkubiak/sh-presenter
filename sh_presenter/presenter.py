@@ -119,7 +119,15 @@ class Presenter:
                 time.sleep(delay)
             self._session.send_key(stroke)
 
-    def vim_diff(self):
+        time.sleep(0.1)
+
+    def vim_diff(self, text0, text1):
+        """
+        Generate sequence of vim keys to convert document `text0` to `text1`.
+
+        @param text0: TODO
+        @param text1: TODO
+        """
         raise NotImplemented()
 
     def marker(self, marker_id: MarkerId) -> None:
