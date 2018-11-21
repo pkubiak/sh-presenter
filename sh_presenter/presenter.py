@@ -45,6 +45,8 @@ class Presenter:
             if isinstance(item, Marker):
                 markers[item.id] = len(outputs)
             elif isinstance(item, Output):
+                if item.text.startswith('\u001bk'):  # HACK: ignore commands changing window title (because asciinema doesn't support them)
+                    continue
                 outputs.append(item)
             else:
                 raise RuntimeError(f"Unexpected output class: {item}")

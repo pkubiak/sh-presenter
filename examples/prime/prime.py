@@ -1,4 +1,4 @@
-def is_prime(x: int) -> bool:
+def is_prime(x):
     d = 2
     while d * d < x:
         if x % d == 0:

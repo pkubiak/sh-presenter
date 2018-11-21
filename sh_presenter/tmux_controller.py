@@ -132,6 +132,8 @@ class TmuxSession:
         self.set_option('force-width', self.width, glob=True)
         self.set_option('force-height', self.height, glob=True)
         self.set_option('set-titles', 'off', glob=True)  # prevent generation of title changing sequences (not supported by asciinema)
+        self.set_option('automatic-rename', 'off', window=True, glob=True)  # prevent strange escape sequences in cast files
+        self.set_option('allow-rename', 'off', window=True,  glob=True)
         # self.set_option('aggressive-resize', 'on', glob=True)
         # self.set_option('status', 'off', glob=True)
 
